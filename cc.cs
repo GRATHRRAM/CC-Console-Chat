@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -14,19 +14,23 @@ namespace program
         private const int PORT = 8000;
         private static readonly byte[] buffer = new byte[BUFFER_SIZE];
 
-        private static readonly Socket ClientSocket = new Socket
+        private static Socket ClientSocket = new Socket
            (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         private static byte[] client_buffer = new byte[BUFFER_SIZE]; 
 
         static void Main()
         {
+            Console.Title = "CC - ConsoleChat";
             Console.WriteLine("Wellcome to CC ConsoleChat!");
+            Console.WriteLine("Turn off any firewall!!!");
             Console.WriteLine("H/J(q/w) H-host J-join");
             string inp = Console.ReadLine();
             inp = inp.ToLower();
             if (inp == "j" || inp == "q")
             {
-                ConnectToServer();
+                Console.Write("Type ip to connect: ");
+                string ip = Console.ReadLine();
+                ConnectToServer(IPAddress.Parse(ip));
                 Console.Title = "CC - Client ** " + ClientSocket.LocalEndPoint;
                 RequestLoop();
                 Exit();
@@ -109,7 +113,7 @@ namespace program
             current.BeginReceive(buffer, 0, BUFFER_SIZE, SocketFlags.None, ReceiveCallback, current);
         }
 
-        private static void ConnectToServer()
+        private static void ConnectToServer(IPAddress ip)
         {
             int attempts = 0;
 
@@ -120,7 +124,7 @@ namespace program
                     attempts++;
                     Console.WriteLine("Connection attempt " + attempts);
                     // Change IPAddress.Loopback to a remote IP to connect to a remote host.
-                    ClientSocket.Connect(IPAddress.Loopback, PORT);
+                    ClientSocket.Connect(ip, PORT);
                 }
                 catch (SocketException)
                 {
