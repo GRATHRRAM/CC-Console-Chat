@@ -23,6 +23,7 @@ namespace program
             Console.Title = "CC - ConsoleChat";
             Console.WriteLine("Wellcome to CC ConsoleChat!");
             Console.WriteLine("Turn off any firewall!!!");
+            Console.WriteLine("Encoding ASCII");
             Console.WriteLine("H/J(q/w) H-host J-join");
             string inp = Console.ReadLine();
             inp = inp.ToLower();
@@ -38,7 +39,7 @@ namespace program
             else if (inp == "h" || inp == "w")
             {
                 SetupServer();
-                Console.Title = "CC - Host ** " + serverSocket.LocalEndPoint;
+                Console.Title = "CC - Host ** " + serverSocket.RemoteEndPoint;
                 Console.WriteLine("Press Enter to close server...");
                 Console.ReadLine();
                 CloseAllSockets();
@@ -106,12 +107,10 @@ namespace program
             string text = Encoding.ASCII.GetString(recBuf);
             Console.WriteLine("{0} # " + text, current.RemoteEndPoint);
 
-
-            string date = DateTime.Now.ToLongTimeString().ToString();
-            current.Send(Encoding.ASCII.GetBytes(date));
+            Send2AllClients(recBuf, current.RemoteEndPoint.ToString());
 
             current.BeginReceive(buffer, 0, BUFFER_SIZE, SocketFlags.None, ReceiveCallback, current);
-        }
+        }//server
 
         private static void ConnectToServer(IPAddress ip)
         {
@@ -135,6 +134,8 @@ namespace program
             Console.Clear();
             Console.WriteLine("Connected");
             Console.WriteLine("Starting async listening...");
+            ClientSocket.BeginReceive(buffer, 0,buffer.Length, SocketFlags.None, ClientReceiveAsync, ClientSocket);
+            Console.WriteLine("Done...");
         }
 
         private static void RequestLoop()
@@ -144,7 +145,7 @@ namespace program
             while (true)
             {
                 SendRequest();
-                ReceiveResponse();
+                //ReceiveResponse();
             }
         }
 
@@ -183,6 +184,40 @@ namespace program
             Array.Copy(buffer, data, received);
             string text = "\n" + Encoding.ASCII.GetString(data);
             Console.WriteLine(text);
+        }
+
+        private static void ClientReceiveAsync(IAsyncResult AR)
+        {
+            Socket current = (Socket)AR.AsyncState;
+            int received;
+
+            try
+            {
+                received = current.EndReceive(AR);
+            }
+            catch (SocketException)
+            {
+                Console.WriteLine("Client: Packet from Host lost...");
+                return;
+            }
+
+            byte[] recBuf = new byte[received];
+            Array.Copy(buffer, recBuf, received);
+            string text = Encoding.ASCII.GetString(recBuf);
+            Console.WriteLine("\n" + text);
+
+            current.BeginReceive(buffer, 0, BUFFER_SIZE, SocketFlags.None, ReceiveCallback, current);
+        }
+
+        private static void Send2AllClients(byte[] message,string SenderIp)
+        {
+            foreach (Socket socket in clientSockets)
+            {
+                if (socket.RemoteEndPoint.ToString() != SenderIp)
+                {
+                    socket.SendAsync(message, SocketFlags.None);
+                }
+            }
         }
     }
 }
